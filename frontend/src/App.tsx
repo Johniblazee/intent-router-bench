@@ -61,6 +61,7 @@ export default function App() {
       .then((d) => {
         setModels(d.models);
         setDemos(d.demos);
+        setModel((m) => (d.models.includes(m) ? m : d.models[0]));
       });
   }, []);
 
@@ -84,11 +85,12 @@ export default function App() {
         }),
       });
       const d = await r.json();
+      const detail = typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail ?? r.statusText);
       setHistory((h) => [
         ...h,
         r.ok
           ? { message, intent: d.intent, ms: d.ms, loadS: d.load_s, response: d.response, model: label }
-          : { message, model: label, error: d.detail ?? r.statusText },
+          : { message, model: label, error: detail },
       ]);
     } catch (e) {
       setHistory((h) => [...h, { message, model, error: String(e) }]);
@@ -234,7 +236,7 @@ export default function App() {
               <div className="flex justify-start">
                 <Card className="max-w-[70%] space-y-1.5 px-4 py-3">
                   {h.error ? (
-                    <Badge variant="destructive">{h.error}</Badge>
+                    <Badge variant="destructive" className="whitespace-normal text-left">{String(h.error)}</Badge>
                   ) : (
                     <>
                       <div className="flex flex-wrap items-center gap-2">

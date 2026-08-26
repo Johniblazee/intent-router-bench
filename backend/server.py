@@ -108,8 +108,8 @@ def provider_models(req: ProviderModelsReq):
 
 @app.post("/api/route")
 def route(req: RouteReq):
-    if req.model not in ROSTER:
-        raise HTTPException(400, f"unknown model {req.model!r}")
+    if req.model not in set(LIGHT_MODELS) | API_MODELS:
+        raise HTTPException(400, f"model {req.model!r} not available on this deployment")
     try:
         t0 = time.perf_counter()
         clf = get_clf(req.model, req.api_key, req.provider_model)
