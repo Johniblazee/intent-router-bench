@@ -1,0 +1,13 @@
+# torch installed separately with CUDA wheel — see README
+transformers>=4.51
+sentence-transformers>=3.0
+model2vec
+scikit-learn
+datasets
+accelerate
+langgraph
+groq
+google-genai
+pandas
+tabulate
+gradio
