@@ -77,6 +77,8 @@ bart-large-mnli, local LLMs) stay benchable via the CLI.
 | qwen3-embed-0.6b | 0.90 | 0.97 | 400–540ms | 1.2s | no accuracy gain over bge/e5, 10–40x slower |
 | deberta-small-mnli | 0.34 | 0.74 | 560–870ms | 1s | zero-shot too weak on custom intents |
 | bart-large-mnli | 0.32 | 0.73 | 1.3–2.1s | 13s | not viable on CPU |
+| qwen3-0.6b (LLM) | 0.22 | — | 892ms | 1.3s | small LLM can't hold the label format |
+| arch-router-1.5b (LLM) | 0.58 | — | 7.0s | 9.4s | purpose-built router, still loses hard on CPU |
 
 Takeaway: small embedders + logistic regression win outright — zero-shot NLI and
 bigger models add latency without accuracy on this task.
