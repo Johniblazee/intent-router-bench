@@ -24,7 +24,7 @@ python3.11 -m venv .venv
 ## Run
 
 ```powershell
-.venv\Scripts\python ui.py                             # Gradio UI at http://127.0.0.1:7860
+.venv\Scripts\python server.py                         # React UI at http://localhost:8000
 .venv\Scripts\python bench.py                          # all local models, both datasets
 .venv\Scripts\python bench.py --models potion-8m,bge-small --datasets custom
 .venv\Scripts\python bench.py --models all-api         # needs GROQ_API_KEY / GEMINI_API_KEY
@@ -35,6 +35,18 @@ python3.11 -m venv .venv
 (Linux/Mac: swap `.venv\Scripts\python` for `.venv/bin/python`.)
 
 Models download from Hugging Face on first use (~30MB–3GB per model, cached in `~/.cache/huggingface`).
+
+## UI
+
+React + shadcn-style components, served prebuilt by FastAPI — end users need only
+Python (`python server.py`, no node). To hack on the UI:
+
+```bash
+cd frontend
+npm install
+npm run dev        # Vite dev server on :5173, proxies /api to :8000
+npm run build      # refresh the committed dist/ before pushing
+```
 
 Results append to `results.csv`; a markdown table prints at the end.
 

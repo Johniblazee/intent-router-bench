@@ -2,4 +2,5 @@
 __pycache__/
 results.csv
 *.pyc
-.gradio/
+node_modules/
+# frontend/dist is committed on purpose — end users run the UI with Python only

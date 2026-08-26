@@ -10,4 +10,5 @@ groq
 google-genai
 pandas
 tabulate
-gradio
+fastapi
+uvicorn
