@@ -65,7 +65,9 @@ export default function App() {
       });
   }, []);
 
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [history, busy]);
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "smooth" });  // braces matter: implicit return becomes React cleanup
+  }, [history, busy]);
 
   async function route(message: string) {
     if (!message.trim() || busy) return;
