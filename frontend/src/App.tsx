@@ -16,6 +16,40 @@ export default function App() {
   const [models, setModels] = useState<string[]>([]);
   const [demos, setDemos] = useState<string[]>([]);
   const [model, setModel] = useState("bge-small");
+  const [groqKey, setGroqKey] = useState(() => localStorage.getItem("groq_key") ?? "");
+  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem("gemini_key") ?? "");
+  const [providerModels, setProviderModels] = useState<string[]>([]);
+  const [providerModel, setProviderModel] = useState("");
+  const [provErr, setProvErr] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [warming, setWarming] = useState(false);
+  const [warmed, setWarmed] = useState<Record<string, number> | null>(null);
+  const provider = model.startsWith("groq") ? "groq" : model.startsWith("gemini") ? "gemini" : "";
+
+  useEffect(() => {
+    setProviderModels([]);
+    setProviderModel("");
+    setProvErr("");
+  }, [provider]);
+
+  async function fetchProviderModels() {
+    setFetching(true);
+    setProvErr("");
+    try {
+      const r = await fetch("/api/provider-models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, api_key: (provider === "groq" ? groqKey : geminiKey) || null }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail ?? r.statusText);
+      setProviderModels(d.models);
+    } catch (e) {
+      setProvErr(String(e));
+    } finally {
+      setFetching(false);
+    }
+  }
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<Entry[]>([]);
   const [busy, setBusy] = useState(false);
@@ -37,17 +71,24 @@ export default function App() {
     setInput("");
     setBusy(true);
     try {
+      const apiKey = provider === "groq" ? groqKey : provider === "gemini" ? geminiKey : "";
+      const label = providerModel ? `${model} → ${providerModel}` : model;
       const r = await fetch("/api/route", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, model }),
+        body: JSON.stringify({
+          message,
+          model,
+          api_key: apiKey || null,
+          provider_model: providerModel || null,
+        }),
       });
       const d = await r.json();
       setHistory((h) => [
         ...h,
         r.ok
-          ? { message, intent: d.intent, ms: d.ms, loadS: d.load_s, response: d.response, model }
-          : { message, model, error: d.detail ?? r.statusText },
+          ? { message, intent: d.intent, ms: d.ms, loadS: d.load_s, response: d.response, model: label }
+          : { message, model: label, error: d.detail ?? r.statusText },
       ]);
     } catch (e) {
       setHistory((h) => [...h, { message, model, error: String(e) }]);
@@ -64,6 +105,42 @@ export default function App() {
           <h1 className="text-lg font-semibold">Intent Router Test</h1>
         </div>
         <div className="space-y-1.5">
+          <Button
+            className="w-full"
+            disabled={warming}
+            onClick={async () => {
+              setWarming(true);
+              try {
+                const r = await fetch("/api/preload", { method: "POST" });
+                setWarmed((await r.json()).loaded);
+              } catch (e) {
+                setWarmed({ error: -1 });
+              } finally {
+                setWarming(false);
+              }
+            }}
+          >
+            {warming ? (
+              <>
+                <Loader2 className="size-4 animate-spin" /> loading weights…
+              </>
+            ) : warmed ? (
+              "All models loaded ✓"
+            ) : (
+              "Load all model weights"
+            )}
+          </Button>
+          {warmed && !warming && (
+            <div className="space-y-0.5 text-xs text-muted-foreground">
+              {Object.entries(warmed).map(([m, s]) => (
+                <div key={m}>
+                  {m}: {s < 0 ? "failed" : `${s}s`}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="space-y-1.5">
           <label className="text-sm font-medium">Model</label>
           <Select value={model} onChange={(e) => setModel(e.target.value)}>
             {models.map((m) => (
@@ -73,10 +150,58 @@ export default function App() {
             ))}
           </Select>
           <p className="text-xs text-muted-foreground">
-            API models need GROQ_API_KEY / GEMINI_API_KEY. First message per model loads it — later
-            ones show true latency.
+            First message per model loads it — later ones show true latency.
           </p>
         </div>
+        {(model.startsWith("groq") || model.startsWith("gemini")) && (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">API key (BYOK)</label>
+            {model.startsWith("groq") ? (
+              <Input
+                type="password"
+                placeholder="gsk_…"
+                value={groqKey}
+                onChange={(e) => {
+                  setGroqKey(e.target.value);
+                  localStorage.setItem("groq_key", e.target.value);
+                }}
+              />
+            ) : (
+              <Input
+                type="password"
+                placeholder="AIza…"
+                value={geminiKey}
+                onChange={(e) => {
+                  setGeminiKey(e.target.value);
+                  localStorage.setItem("gemini_key", e.target.value);
+                }}
+              />
+            )}
+            <p className="text-xs text-muted-foreground">
+              Stays in your browser; sent only to your local backend per request. Empty = server env
+              var fallback.
+            </p>
+            <Button
+              variant="secondary"
+              className="w-full"
+              disabled={fetching}
+              onClick={fetchProviderModels}
+            >
+              {fetching ? "Checking server…" : "Fetch live models"}
+            </Button>
+            {providerModels.length > 0 && (
+              <Select value={providerModel} onChange={(e) => setProviderModel(e.target.value)}>
+                <option value="">default ({provider === "groq" ? "llama-3.1-8b-instant" : "gemini-2.5-flash-lite"})</option>
+                {providerModels.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </Select>
+            )}
+            {provErr && <p className="text-xs text-destructive">{provErr}</p>}
+          </div>
+        )}
         <div className="space-y-1.5 overflow-y-auto">
           <label className="text-sm font-medium">Try one</label>
           {demos.map((d) => (

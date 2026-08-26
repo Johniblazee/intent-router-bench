@@ -154,12 +154,13 @@ class LocalLLM:
         kw = {}
         if "qwen3" in self.model_id.lower():
             kw["enable_thinking"] = False
-        ids = self.tok.apply_chat_template(messages, add_generation_prompt=True,
-                                           return_tensors="pt", **kw).to(self.model.device)
+        text = self.tok.apply_chat_template(messages, add_generation_prompt=True,
+                                            tokenize=False, **kw)
+        inputs = self.tok(text, return_tensors="pt").to(self.model.device)
         with torch.no_grad():
-            out = self.model.generate(ids, max_new_tokens=max_new_tokens,
+            out = self.model.generate(**inputs, max_new_tokens=max_new_tokens,
                                       do_sample=False, pad_token_id=self.tok.eos_token_id)
-        return self.tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True)
+        return self.tok.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
 
     def predict(self, text):
         prompt = LLM_PROMPT.format(labels=", ".join(self.labels), text=text)
@@ -207,10 +208,11 @@ class ArchRouter(LocalLLM):
 class GroqLLM:
     def __init__(self, name="groq-llama-3.1-8b", model_id="llama-3.1-8b-instant"):
         self.name, self.model_id = name, model_id
+        self.api_key = None  # BYOK; falls back to GROQ_API_KEY env
 
     def load(self):
         from groq import Groq
-        self.client = Groq()  # GROQ_API_KEY
+        self.client = Groq(api_key=self.api_key) if self.api_key else Groq()
 
     def train(self, pairs, labels):
         self.labels = labels
@@ -226,10 +228,11 @@ class GroqLLM:
 class GeminiLLM:
     def __init__(self, name="gemini-flash-lite", model_id="gemini-2.5-flash-lite"):
         self.name, self.model_id = name, model_id
+        self.api_key = None  # BYOK; falls back to GEMINI_API_KEY env
 
     def load(self):
         from google import genai
-        self.client = genai.Client()  # GEMINI_API_KEY
+        self.client = genai.Client(api_key=self.api_key) if self.api_key else genai.Client()
 
     def train(self, pairs, labels):
         self.labels = labels
@@ -264,6 +267,8 @@ ROSTER = {
     "gemini-flash-lite": GeminiLLM,
 }
 API_MODELS = {"groq-llama-3.1-8b", "gemini-flash-lite"}
+# ponytail: multi-GB and/or not CPU-viable — benchable via CLI, stripped from the served UI
+HEAVY_MODELS = {"qwen3-embed-0.6b", "bart-large-mnli", "qwen3-0.6b", "gemma-3-270m", "arch-router-1.5b"}
 
 # ---------------------------------------------------------------- harness
 

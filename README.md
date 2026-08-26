@@ -63,6 +63,24 @@ Results append to `results.csv`; a markdown table prints at the end.
 | local LLM | qwen3-0.6b, gemma-3-270m, arch-router-1.5b | slow on CPU by design — that's the datapoint; gemma is gated on HF (needs `hf auth login` + license) |
 | API | groq-llama-3.1-8b, gemini-flash-lite | skipped unless env key set |
 
+The UI serves only the CPU-viable light tier; heavy models (qwen3-embed-0.6b,
+bart-large-mnli, local LLMs) stay benchable via the CLI.
+
+## Results (CPU, 2 threads — mirrors a 2-vCPU pod)
+
+| model | custom acc | clinc acc | p50 | p95 | verdict |
+|-------|-----------|-----------|-----|-----|---------|
+| potion-8m | 0.84 | 0.89 | **0.2–0.8ms** | 1ms | fastest possible; accuracy floor acceptable |
+| **bge-small** | **0.90** | **0.97** | **10–54ms** | 59ms | **recommended router** |
+| gte-small | 0.92 | 0.95 | 36–38ms | 58ms | solid alternative |
+| e5-small | 0.86 | 0.97 | 12–14ms | 22ms | fastest transformer; multilingual |
+| qwen3-embed-0.6b | 0.90 | 0.97 | 400–540ms | 1.2s | no accuracy gain over bge/e5, 10–40x slower |
+| deberta-small-mnli | 0.34 | 0.74 | 560–870ms | 1s | zero-shot too weak on custom intents |
+| bart-large-mnli | 0.32 | 0.73 | 1.3–2.1s | 13s | not viable on CPU |
+
+Takeaway: small embedders + logistic regression win outright — zero-shot NLI and
+bigger models add latency without accuracy on this task.
+
 ## Datasets
 
 - `custom` — 10 chat-router intents, 15 handwritten utterances each (data/custom_intents.json), 10 train / 5 test per intent
