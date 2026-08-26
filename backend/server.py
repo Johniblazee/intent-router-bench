@@ -57,7 +57,7 @@ def route(req: RouteReq):
     return {"intent": out["intent"], "ms": ms, "load_s": load_s, "response": out["response"]}
 
 
-dist = HERE / "frontend" / "dist"
+dist = HERE.parent / "frontend" / "dist"
 if dist.exists():
     app.mount("/", StaticFiles(directory=dist, html=True), name="ui")
 

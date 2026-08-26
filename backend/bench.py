@@ -59,7 +59,12 @@ DATASETS = {"custom": load_custom, "clinc": load_clinc}
 
 # ---------------------------------------------------------------- classifiers
 
+DEVICE = "auto"  # set from --device; "cpu" mirrors CPU-only targets like EKS pods
+
+
 def _device():
+    if DEVICE != "auto":
+        return DEVICE
     import torch
     return "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -137,8 +142,9 @@ class LocalLLM:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
         self.tok = AutoTokenizer.from_pretrained(self.model_id)
+        dtype = torch.float16 if _device() == "cuda" else torch.float32
         self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_id, torch_dtype=torch.float16, device_map=_device())
+            self.model_id, torch_dtype=dtype, device_map=_device())
 
     def train(self, pairs, labels):
         self.labels = labels
@@ -286,6 +292,7 @@ def bench_one(key, train, test, labels, dataset_name):
     row = {
         "model": clf.name,
         "dataset": dataset_name,
+        "device": _device(),
         "accuracy": round(accuracy_score(golds, preds), 3),
         "macro_f1": round(f1_score(golds, preds, average="macro"), 3),
         "p50_ms": round(statistics.median(lat), 1),
@@ -311,7 +318,17 @@ def main():
                     help="comma list, 'all', 'all-local', or 'all-api'")
     ap.add_argument("--datasets", default="both", help="custom, clinc, or both")
     ap.add_argument("--out", default=str(HERE / "results.csv"))
+    ap.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"],
+                    help="cpu = mirror CPU-only prod targets (e.g. EKS pods)")
+    ap.add_argument("--threads", type=int, default=0,
+                    help="cap torch CPU threads, emulates pod vCPU limit (e.g. 2)")
     args = ap.parse_args()
+
+    global DEVICE
+    DEVICE = args.device
+    if args.threads:
+        import torch
+        torch.set_num_threads(args.threads)
 
     if args.models == "all":
         keys = list(ROSTER)

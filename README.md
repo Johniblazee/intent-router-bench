@@ -6,30 +6,33 @@ sibling folders.
 
 ## Setup (once)
 
+CPU-only on purpose — the production target is CPU pods (EKS), so benchmark numbers
+should come from CPU inference.
+
 ```powershell
 # Windows
 py -3.11 -m venv .venv
-.venv\Scripts\python -m pip install torch --index-url https://download.pytorch.org/whl/cu124   # NVIDIA GPU
-# no NVIDIA GPU: .venv\Scripts\python -m pip install torch   (CPU — LLM tier will be slow)
-.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python -m pip install torch    # CPU wheel on Windows/Mac by default
+.venv\Scripts\python -m pip install -r backend\requirements.txt
 ```
 
 ```bash
-# Linux / Mac
+# Linux / Mac  (Linux default wheel bundles CUDA — use the CPU index to stay small)
 python3.11 -m venv .venv
-.venv/bin/pip install torch
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu
+.venv/bin/pip install -r backend/requirements.txt
 ```
 
 ## Run
 
 ```powershell
-.venv\Scripts\python server.py                         # React UI at http://localhost:8000
-.venv\Scripts\python bench.py                          # all local models, both datasets
-.venv\Scripts\python bench.py --models potion-8m,bge-small --datasets custom
-.venv\Scripts\python bench.py --models all-api         # needs GROQ_API_KEY / GEMINI_API_KEY
-.venv\Scripts\python router_graph.py --model bge-small # LangGraph router demo (CLI)
-.venv\Scripts\python test_bench.py                     # smoke check
+.venv\Scripts\python backend\server.py                         # React UI at http://localhost:8000
+.venv\Scripts\python backend\bench.py                          # all local models, both datasets
+.venv\Scripts\python backend\bench.py --models potion-8m,bge-small --datasets custom
+.venv\Scripts\python backend\bench.py --models all-api         # needs GROQ_API_KEY / GEMINI_API_KEY
+.venv\Scripts\python backend\bench.py --device cpu --threads 2 # mirror a 2-vCPU CPU pod (e.g. EKS)
+.venv\Scripts\python backend\router_graph.py --model bge-small # LangGraph router demo (CLI)
+.venv\Scripts\python backend\test_bench.py                     # smoke check
 ```
 
 (Linux/Mac: swap `.venv\Scripts\python` for `.venv/bin/python`.)
@@ -57,7 +60,7 @@ Results append to `results.csv`; a markdown table prints at the end.
 | static embedding | potion-8m (model2vec) | sub-ms CPU |
 | embedding + LR | bge-small, gte-small, e5-small, qwen3-embed-0.6b | production sweet spot |
 | zero-shot NLI | deberta-small-mnli, bart-large-mnli | no training data needed |
-| local LLM | qwen3-0.6b, gemma-3-270m, arch-router-1.5b | gemma is gated on HF (needs `hf auth login` + license) |
+| local LLM | qwen3-0.6b, gemma-3-270m, arch-router-1.5b | slow on CPU by design — that's the datapoint; gemma is gated on HF (needs `hf auth login` + license) |
 | API | groq-llama-3.1-8b, gemini-flash-lite | skipped unless env key set |
 
 ## Datasets
