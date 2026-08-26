@@ -3,4 +3,5 @@ __pycache__/
 results.csv
 *.pyc
 node_modules/
+docs/
 # frontend/dist is committed on purpose — end users run the UI with Python only
