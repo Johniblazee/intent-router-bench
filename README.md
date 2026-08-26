@@ -4,6 +4,16 @@ Benchmarks intent classification models (accuracy + CPU latency) for a chat
 router, with a React test UI. Built to pick the routing model for a larger
 workflow system targeting CPU-only pods (AWS EKS).
 
+## Deploy
+
+- **Vercel (live demo):** `vercel --prod` from the repo root. Serves the React UI
+  statically and `/api/*` as a Python function with the slim roster (potion-8m +
+  BYOK API models — no torch). Config: `vercel.json`, root `requirements.txt`,
+  `api/index.py`.
+- **Docker / EKS:** `docker build -t intent-router .` — full roster, weights baked
+  at build (`backend/preload.py`), serves on :7860. Same image works as a
+  Hugging Face Docker Space, but HF now requires a PRO subscription for those.
+
 ## Setup (once)
 
 CPU-only on purpose — the production target is CPU pods, so benchmark numbers

@@ -1,0 +1,7 @@
+# Vercel serverless deps (slim: potion + API models only, no torch).
+# Full local/EKS install uses backend/requirements.txt instead.
+model2vec
+scikit-learn
+fastapi
+groq
+google-genai

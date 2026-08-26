@@ -16,7 +16,11 @@ from bench import API_MODELS, ROSTER, load_custom
 HERE = Path(__file__).parent
 app = FastAPI(title="Intent Router Test")
 
+import os
+
 LIGHT_MODELS = [k for k in ROSTER if k not in API_MODELS]
+if os.environ.get("VERCEL"):
+    LIGHT_MODELS = ["potion-8m"]  # slim serverless deploy; full tier runs locally / on EKS
 
 DEMO_MESSAGES = [
     "hey, how's it going?",
