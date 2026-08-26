@@ -6,10 +6,10 @@ workflow system targeting CPU-only pods (AWS EKS).
 
 ## Deploy
 
-- **Vercel (live demo):** `vercel --prod` from the repo root. Serves the React UI
-  statically and `/api/*` as a Python function with the slim roster (potion-8m +
-  BYOK API models — no torch). Config: `vercel.json`, root `requirements.txt`,
-  `api/index.py`.
+- **Vercel (live demo):** import the repo at vercel.com/new — zero config. The
+  FastAPI preset finds `app.py` (root) and routes everything to it; the slim
+  roster (potion-8m + BYOK API models, no torch) comes from the root
+  `requirements.txt`.
 - **Docker / EKS:** `docker build -t intent-router .` — full roster, weights baked
   at build (`backend/preload.py`), serves on :7860. Same image works as a
   Hugging Face Docker Space, but HF now requires a PRO subscription for those.
