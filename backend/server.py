@@ -11,19 +11,29 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from bench import API_MODELS, DATASETS, HEAVY_MODELS, ROSTER
-from router_graph import DEMO_MESSAGES, build_graph
+from bench import API_MODELS, ROSTER, load_custom
 
 HERE = Path(__file__).parent
 app = FastAPI(title="Intent Router Test")
 
+LIGHT_MODELS = [k for k in ROSTER if k not in API_MODELS]
+
+DEMO_MESSAGES = [
+    "hey, how's it going?",
+    "my payment failed twice and I got charged anyway",
+    "where's my package? it's been a week",
+    "the app crashes every time I open settings",
+    "I want to talk to a real human right now",
+    "what's a good recipe for ramen?",
+]
+
 _cache = {}  # ponytail: unbounded, single-user test tool
 
 
-def get_graph(key, api_key=None, provider_model=None):
+def get_clf(key, api_key=None, provider_model=None):
     cache_k = (key, api_key, provider_model) if key in API_MODELS else key
     if cache_k not in _cache:
-        train, _, labels = DATASETS["custom"]()
+        train, _, labels = load_custom()
         clf = ROSTER[key]()
         if api_key:
             clf.api_key = api_key
@@ -31,11 +41,8 @@ def get_graph(key, api_key=None, provider_model=None):
             clf.model_id = provider_model  # live-picked model overrides the default
         clf.load()
         clf.train(train, labels)
-        _cache[cache_k] = build_graph(clf, labels)
+        _cache[cache_k] = clf
     return _cache[cache_k]
-
-
-LIGHT_MODELS = [k for k in ROSTER if k not in API_MODELS and k not in HEAVY_MODELS]
 
 
 @app.get("/api/models")
@@ -49,7 +56,7 @@ def preload():
     out = {}
     for k in LIGHT_MODELS:
         t0 = time.perf_counter()
-        get_graph(k)
+        get_clf(k)
         out[k] = round(time.perf_counter() - t0, 2)
     return {"loaded": out}
 
@@ -101,14 +108,16 @@ def route(req: RouteReq):
         raise HTTPException(400, f"unknown model {req.model!r}")
     try:
         t0 = time.perf_counter()
-        graph = get_graph(req.model, req.api_key, req.provider_model)
+        clf = get_clf(req.model, req.api_key, req.provider_model)
         load_s = time.perf_counter() - t0
         t0 = time.perf_counter()
-        out = graph.invoke({"message": req.message})
+        intent = clf.predict(req.message)
         ms = (time.perf_counter() - t0) * 1000
-    except Exception as e:  # missing API key, gated model, OOM — surface to UI
+    except Exception as e:  # missing API key, OOM — surface to UI
         raise HTTPException(500, f"{type(e).__name__}: {e}")
-    return {"intent": out["intent"], "ms": ms, "load_s": load_s, "response": out["response"]}
+    # ponytail: stub — the real system dispatches to a workflow per intent here
+    response = f"[{intent} workflow] handling: {req.message!r}"
+    return {"intent": intent, "ms": ms, "load_s": load_s, "response": response}
 
 
 dist = HERE.parent / "frontend" / "dist"
