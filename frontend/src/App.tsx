@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Router, Send } from "lucide-react";
+import { Loader2, Route, Send } from "lucide-react";
 import { Badge, Button, Card, Input, Select } from "./components/ui";
 
 type Entry = {
@@ -105,7 +105,7 @@ export default function App() {
     <div className="flex h-screen">
       <aside className="flex w-80 flex-col gap-4 border-r border-border p-4">
         <div className="flex items-center gap-2">
-          <Router className="size-5" />
+          <Route className="size-5" />
           <h1 className="text-lg font-semibold">Intent Router Test</h1>
         </div>
         <div className="space-y-1.5">
